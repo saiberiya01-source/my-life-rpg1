@@ -1,0 +1,227 @@
+// Инициализация Telegram Mini App
+const tg = window.Telegram.WebApp;
+tg.expand();
+
+// Состояние игрока
+let player = { xp: 0, level: 1, completedQuests: [] };
+
+// Настройки стилей узлов в зависимости от их статуса
+const STYLES = {
+    locked: { color: { background: '#222', border: '#444' }, font: { color: '#666' }, shadow: false },
+    unlocked: { color: { background: '#2a2f4c', border: '#00ffcc' }, font: { color: '#fff' }, shadow: { enabled: true, color: '#00ffcc', size: 10 } },
+    completed: { color: { background: '#1a4c3a', border: '#00ffcc' }, font: { color: '#888' }, shadow: false },
+    boss_locked: { color: { background: '#331111', border: '#552222' }, font: { color: '#884444' } },
+    boss_unlocked: { color: { background: '#ff3366', border: '#ffaaaa' }, font: { color: '#fff' }, shadow: { enabled: true, color: '#ff3366', size: 25 }, size: 40 },
+    boss_completed: { color: { background: '#551122', border: '#ff3366' }, font: { color: '#aaa' } }
+};
+
+// --- 1. ГЕНЕРАЦИЯ БАЗЫ КВЕСТОВ (50+ штук) ---
+let questsData = [];
+let edgesData = [];
+
+function generateInitialQuests() {
+    // Центральный узел
+    questsData.push({ id: 'start', label: 'Начало Семестра', category: 'core', xp: 50, level: 0 });
+
+    // Ветка 1: Ученики (Работа) - 15 квестов
+    questsData.push({ id: 'tutor_root', label: 'Репетиторство', category: 'work', xp: 100, level: 1 });
+    edgesData.push({ from: 'start', to: 'tutor_root' });
+    const students = ['Арина', 'Макар', 'София', 'Рома', 'Данил', 'Настя', 'Лера', 'Илья', 'Глеб', 'Ира', 'Лёша', 'Вика', 'Амир', 'Салават', 'Тимофей'];
+    students.forEach((name, idx) => {
+        let qId = `student_${idx}`;
+        questsData.push({ id: qId, label: `Пара: ${name}`, category: 'work', xp: 150, level: 2 });
+        edgesData.push({ from: 'tutor_root', to: qId });
+    });
+
+    // Ветка 2: Создание курсов (ЕГЭ Математика 1-19) - 19 квестов
+    questsData.push({ id: 'ege_root', label: 'Курс ЕГЭ', category: 'course', xp: 200, level: 1 });
+    edgesData.push({ from: 'start', to: 'ege_root' });
+    for (let i = 1; i <= 19; i++) {
+        let qId = `ege_${i}`;
+        let xpReward = i > 12 ? 300 : 100; // Сложная часть дает больше XP
+        questsData.push({ id: qId, label: `ЕГЭ №${i}`, category: 'course', xp: xpReward, level: i > 12 ? 4 : 3 });
+        if (i === 1) edgesData.push({ from: 'ege_root', to: qId });
+        else edgesData.push({ from: `ege_${i-1}`, to: qId }); // Линейная зависимость
+    }
+
+    // Ветка 3: Универ - 10 квестов
+    questsData.push({ id: 'uni_root', label: 'Университет', category: 'study', xp: 100, level: 1 });
+    edgesData.push({ from: 'start', to: 'uni_root' });
+    const uniSubjects = ['СВЧ', 'Радиоприемные', 'Телетрафик', 'Военка', 'Оборуд. систем'];
+    uniSubjects.forEach((subj, idx) => {
+        let qId = `uni_${idx}`;
+        questsData.push({ id: qId, label: `Сдать ${subj}`, category: 'study', xp: 400, level: 2 });
+        edgesData.push({ from: 'uni_root', to: qId });
+    });
+
+    // Ветка 4: БОССЫ (Курсовая и Диплом)
+    questsData.push({ id: 'coursework', label: 'КУРСОВАЯ РАБОТА', category: 'boss', xp: 2000, level: 3, shape: 'hexagon' });
+    questsData.push({ id: 'diploma', label: '🔥 ДИПЛОМ 🔥', category: 'boss', xp: 5000, level: 5, shape: 'diamond' });
+    
+    // Диплом зависит от сдачи всех предметов универа
+    uniSubjects.forEach((_, idx) => {
+        edgesData.push({ from: `uni_${idx}`, to: 'coursework' });
+    });
+    edgesData.push({ from: 'coursework', to: 'diploma' });
+}
+
+generateInitialQuests();
+
+// --- 2. ИНИЦИАЛИЗАЦИЯ VIS.JS ---
+const nodes = new vis.DataSet(questsData.map(q => ({
+    id: q.id, label: `${q.label}\n(${q.xp} XP)`, shape: q.shape || 'dot', size: q.category === 'boss' ? 30 : 20,
+    ...STYLES.locked // По умолчанию всё заблокировано
+})));
+const edges = new vis.DataSet(edgesData.map(e => ({
+    from: e.from, to: e.to, arrows: 'to', color: { color: '#444', highlight: '#00ffcc' }
+})));
+
+const container = document.getElementById('skill_tree');
+const data = { nodes: nodes, edges: edges };
+const options = {
+    physics: {
+        stabilization: true,
+        barnesHut: { gravitationalConstant: -3000, centralGravity: 0.3, springLength: 150 }
+    },
+    interaction: { hover: true, tooltipDelay: 200 }
+};
+
+const network = new vis.Network(container, data, options);
+
+// --- 3. ЛОГИКА ИГРЫ И СОХРАНЕНИЯ ---
+
+function loadProgress() {
+    const saved = localStorage.getItem('rpg_save');
+    if (saved) {
+        player = JSON.parse(saved);
+    } else {
+        // Старт игры: открываем первый квест
+        player.completedQuests = ['start'];
+        updateXP(50);
+    }
+    updateGraphColors();
+    updateHUD();
+}
+
+function saveProgress() {
+    localStorage.setItem('rpg_save', JSON.stringify(player));
+}
+
+// Проверка: доступны ли все входящие связи (prerequisites)
+function isQuestUnlocked(nodeId) {
+    if (player.completedQuests.includes(nodeId)) return false; // Уже выполнен
+    if (nodeId === 'start') return true;
+
+    const incomingEdges = edges.get({ filter: item => item.to === nodeId });
+    if (incomingEdges.length === 0) return true; // Нет зависимостей
+    
+    // Квест открыт, если выполнена ХОТЯ БЫ ОДНА предыдущая задача (или можно сделать все - .every)
+    return incomingEdges.some(edge => player.completedQuests.includes(edge.from));
+}
+
+function updateGraphColors() {
+    let updates = [];
+    nodes.forEach(node => {
+        const questDef = questsData.find(q => q.id === node.id);
+        const isBoss = questDef.category === 'boss';
+
+        if (player.completedQuests.includes(node.id)) {
+            updates.push({ id: node.id, ...(isBoss ? STYLES.boss_completed : STYLES.completed) });
+        } else if (isQuestUnlocked(node.id)) {
+            updates.push({ id: node.id, ...(isBoss ? STYLES.boss_unlocked : STYLES.unlocked) });
+        } else {
+            updates.push({ id: node.id, ...(isBoss ? STYLES.boss_locked : STYLES.locked) });
+        }
+    });
+    nodes.update(updates);
+}
+
+// Клик по узлу
+network.on("click", function (params) {
+    if (params.nodes.length > 0) {
+        const nodeId = params.nodes[0];
+        
+        if (isQuestUnlocked(nodeId)) {
+            completeQuest(nodeId, params.pointer.DOM.x, params.pointer.DOM.y);
+        } else if (player.completedQuests.includes(nodeId)) {
+            tg.showAlert("Этот квест уже завершен!");
+        } else {
+            tg.showAlert("Сначала выполни предыдущие задания!");
+        }
+    }
+});
+
+function completeQuest(nodeId, x, y) {
+    const quest = questsData.find(q => q.id === nodeId);
+    player.completedQuests.push(nodeId);
+    
+    updateXP(quest.xp);
+    saveProgress();
+    updateGraphColors();
+    showFloatingXP(quest.xp, x, y);
+    
+    // Легкая вибрация телефона через API Telegram
+    tg.HapticFeedback.notificationOccurred('success');
+}
+
+// --- 4. ИНТЕРФЕЙС И АНИМАЦИИ ---
+
+function updateXP(amount) {
+    player.xp += amount;
+    player.level = Math.floor(player.xp / 1000) + 1;
+    
+    let currentLevelXP = player.xp % 1000;
+    let percent = (currentLevelXP / 1000) * 100;
+    
+    document.getElementById('level_display').innerText = `LVL ${player.level}`;
+    document.getElementById('xp_text').innerText = `${currentLevelXP} / 1000 XP`;
+    document.getElementById('xp_bar').style.width = `${percent}%`;
+    document.getElementById('flask_liquid').style.height = `${percent}%`;
+}
+
+function updateHUD() {
+    updateXP(0); // Просто обновляет визуал без добавления
+}
+
+function showFloatingXP(amount, x, y) {
+    const el = document.createElement('div');
+    el.className = 'floating-text';
+    el.innerText = `+${amount} XP`;
+    el.style.left = `${x}px`;
+    el.style.top = `${y}px`;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1500);
+}
+
+// --- 5. ДОБАВЛЕНИЕ НОВЫХ КВЕСТОВ ---
+function toggleForm() {
+    const form = document.getElementById('quest_form');
+    form.style.display = form.style.display === 'flex' ? 'none' : 'flex';
+}
+
+function addNewQuest() {
+    const name = document.getElementById('q_name').value;
+    const xp = parseInt(document.getElementById('q_xp').value);
+    const cat = document.getElementById('q_category').value;
+    
+    if(!name) return;
+
+    const newId = 'custom_' + Date.now();
+    questsData.push({ id: newId, label: name, category: cat, xp: xp });
+    
+    nodes.add({
+        id: newId, 
+        label: `${name}\n(${xp} XP)`, 
+        shape: cat === 'boss' ? 'diamond' : 'dot',
+        ...STYLES.unlocked
+    });
+    
+    // По умолчанию привязываем к старту, если нет выбранного
+    edges.add({ from: 'start', to: newId });
+    
+    toggleForm();
+    updateGraphColors();
+}
+
+// Запуск
+loadProgress();
