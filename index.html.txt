@@ -2,299 +2,58 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Life RPG: Финансовая Колба</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RPG Life</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root {
-            --bg-color: #0d1117;
-            --text-color: #c9d1d9;
-            --flask-color: #58a6ff;
-            --liquid-color: #238636;
-            --accent-color: #f0883e;
-            --border-color: #30363d;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            height: 100vh;
-            overflow: hidden;
-            -webkit-user-select: none; /* Запрет выделения текста для TWA */
-        }
-
-        /* Заголовок */
-        header {
-            width: 100%;
-            padding: 15px;
-            text-align: center;
-            border-bottom: 1px solid var(--border-color);
-            background: rgba(13, 17, 23, 0.8);
-            backdrop-filter: blur(5px);
-            position: fixed;
-            top: 0;
-            z-index: 10;
-        }
-
-        h1 {
-            margin: 0;
-            font-size: 1.2rem;
-            color: var(--flask-color);
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        /* Главный контейнер */
-        .main-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            flex-grow: 1;
-            margin-top: 60px; /* Отступ от хедера */
-            width: 100%;
-        }
-
-        /* Секция с колбой */
-        .flask-section {
-            position: relative;
-            margin-bottom: 30px;
-        }
-
-        /* Сама стеклянная колба */
-        .flask {
-            width: 120px;
-            height: 250px;
-            border: 4px solid var(--border-color);
-            border-top: none;
-            border-radius: 0 0 60px 60px;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 0 20px rgba(88, 166, 255, 0.2);
-        }
-
-        /* Горлышко колбы */
-        .flask::before {
-            content: '';
-            position: absolute;
-            top: -20px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 60px;
-            height: 20px;
-            border: 4px solid var(--border-color);
-            border-bottom: none;
-            border-radius: 10px 10px 0 0;
-        }
-
-        /* Жидкость внутри */
-        .liquid {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 0%; /* Начинаем с нуля */
-            background-color: var(--liquid-color);
-            transition: height 1s ease-out; /* Плавная анимация подъема */
-            box-shadow: inset 0 10px 15px rgba(255, 255, 255, 0.2);
-        }
-
-        /* Блики на стекле */
-        .flask-glare {
-            position: absolute;
-            top: 10%;
-            left: 10px;
-            width: 15px;
-            height: 80%;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            pointer-events: none;
-        }
-
-        /* Пузырьки */
-        .bubbles {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            bottom: 0;
-            left: 0;
-        }
-
-        .bubble {
-            position: absolute;
-            bottom: 0;
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            animation: rise 4s infinite ease-in;
-        }
-
-        @keyframes rise {
-            0% { bottom: -10px; transform: translateX(0); opacity: 0; }
-            50% { opacity: 0.5; }
-            100% { bottom: 110%; transform: translateX(100px); opacity: 0; }
-        }
-
-        /* Статистика под колбой */
-        .stats {
-            text-align: center;
-        }
-
-        .balance {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #fff;
-            margin-bottom: 5px;
-        }
-
-        .goal-text {
-            color: #8b949e;
-            font-size: 0.9rem;
-        }
-
-        /* Панель управления (для теста локально) */
-        .controls {
-            margin-top: auto;
-            margin-bottom: 20px;
-            padding: 15px;
-            width: 90%;
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            background: rgba(110, 118, 129, 0.05);
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-
-        input {
-            background-color: #161b22;
-            border: 1px solid var(--border-color);
-            color: var(--text-color);
-            padding: 10px;
-            border-radius: 6px;
-            width: 100px;
-        }
-
-        button {
-            padding: 10px 20px;
-            border-radius: 6px;
-            border: none;
-            cursor: pointer;
-            font-weight: bold;
-            transition: opacity 0.2s;
-        }
-
-        button:active { opacity: 0.7; }
-
-        .btn-income { background-color: var(--liquid-color); color: #fff; }
-        .btn-expense { background-color: var(--accent-color); color: #fff; }
-
+        body { font-family: sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 20px; text-align: center; }
+        .flask-container { position: relative; width: 100px; height: 200px; border: 4px solid #334155; border-radius: 0 0 50px 50px; margin: 20px auto; overflow: hidden; background: #1e293b; }
+        .liquid { position: absolute; bottom: 0; width: 100%; background: #22c55e; transition: height 0.5s ease; box-shadow: 0 0 15px #22c55e; }
+        .stats { font-size: 1.2rem; margin-bottom: 20px; }
+        .btn { display: block; width: 100%; padding: 12px; margin: 10px 0; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; }
+        .btn-work { background: #3b82f6; }
+        .btn-math { background: #a855f7; }
+        .btn-thesis { background: #f59e0b; }
+        input { width: 80%; padding: 10px; border-radius: 8px; border: 1px solid #334155; background: #1e293b; color: white; margin-bottom: 10px; }
     </style>
 </head>
 <body>
-
-    <header>
-        <h1>GOLD FLASK</h1>
-    </header>
-
-    <div class="main-container">
-        <div class="flask-section">
-            <div class="flask">
-                <div class="liquid" id="liquid">
-                    </div>
-                <div class="flask-glare"></div>
-            </div>
-        </div>
-
-        <div class="stats">
-            <div class="balance" id="balanceDisplay">0.00 ₽</div>
-            <div class="goal-text">До следующей цели (10 000 ₽)</div>
-        </div>
-
-        <div class="controls">
-            <input type="number" id="amountInput" placeholder="Сумма">
-            <button class="btn-income" onclick="updateMoney('income')">Доход +</button>
-            <button class="btn-expense" onclick="updateMoney('expense')">Расход -</button>
-        </div>
+    <div class="stats">Уровень: <span id="lvl">1</span> | XP: <span id="xp">0</span></div>
+    
+    <div class="flask-container">
+        <div id="liquid" class="liquid" style="height: 10%;"></div>
     </div>
+    <div id="balance_text">0 ₽</div>
+
+    <hr style="border: 1px solid #334155;">
+
+    <h3>Доход / Расход</h3>
+    <input type="number" id="money_val" placeholder="Сумма (например, 500)">
+    <button class="btn btn-work" onclick="sendMoney('income')">Заработал +</button>
+    <button class="btn" style="background: #ef4444;" onclick="sendMoney('expense')">Потратил -</button>
+
+    <h3>Квесты по математике (ЕГЭ)</h3>
+    <button class="btn btn-math" onclick="sendTask('math_easy', 'Тестовая часть')">Сделал тест (1-12)</button>
+    <button class="btn btn-math" onclick="sendTask('math_hard', 'Сложная задача')">Решил 13-19 задание</button>
+
+    <h3>Диплом / Курсовая</h3>
+    <button class="btn btn-thesis" onclick="sendTask('thesis', 'Этап работы')">Закрыл этап работы</button>
 
     <script>
-        // Инициализация Telegram WebApp
         let tg = window.Telegram.WebApp;
-        tg.expand(); // Расширяем на весь экран
+        tg.expand();
 
-        // Игровые переменные (пока храним локально)
-        let currentBalance = 0;
-        let nextGoal = 10000; // Цель, при которой колба будет полной на 100%
-
-        // DOM элементы
-        const liquid = document.getElementById('liquid');
-        const balanceDisplay = document.getElementById('balanceDisplay');
-        const amountInput = document.getElementById('amountInput');
-
-        // Функция обновления визуализации
-        function updateFlaskView() {
-            // Рассчитываем процент заполнения (не больше 100)
-            let percentage = Math.min((currentBalance / nextGoal) * 100, 100);
-            
-            // Если баланс отрицательный, жидкость пропадает (но лучше не допускать)
-            if (currentBalance < 0) percentage = 0;
-
-            // Устанавливаем высоту жидкости
-            liquid.style.height = percentage + '%';
-
-            // Обновляем текст баланса
-            balanceDisplay.innerText = currentBalance.toFixed(2) + ' ₽';
-
-            // Логика цвета: если баланс падает, можно менять цвет на оранжевый (по желанию)
-            if (currentBalance < 1000) {
-                liquid.style.backgroundColor = '#f0883e'; // Предупреждение
-            } else {
-                liquid.style.backgroundColor = '#238636'; // Норма
-            }
+        function sendMoney(type) {
+            let val = document.getElementById('money_val').value;
+            if(!val) return;
+            tg.sendData(JSON.stringify({action: type, amount: parseFloat(val)}));
+            tg.close(); // Закрываем после отправки
         }
 
-        // Функция для кнопок (Тест)
-        function updateMoney(type) {
-            let amount = parseFloat(amountInput.value);
-            if (isNaN(amount) || amount <= 0) return;
-
-            if (type === 'income') {
-                currentBalance += amount;
-            } else if (type === 'expense') {
-                currentBalance -= amount;
-            }
-
-            amountInput.value = ''; // Очистить поле
-            updateFlaskView();
+        function sendTask(type, name) {
+            tg.sendData(JSON.stringify({action: 'task', task_type: type, task_name: name}));
+            tg.close();
         }
-
-        // Генерируем пузырьки для красоты
-        function createBubbles() {
-            for (let i = 0; i < 10; i++) {
-                let bubble = document.createElement('div');
-                bubble.className = 'bubble';
-                // Случайный размер, задержка и позиция
-                let size = Math.random() * 8 + 4 + 'px';
-                bubble.style.width = size;
-                bubble.style.height = size;
-                bubble.style.left = Math.random() * 100 + '%';
-                bubble.style.animationDelay = Math.random() * 4 + 's';
-                bubble.style.animationDuration = Math.random() * 3 + 2 + 's';
-                liquid.appendChild(bubble);
-            }
-        }
-
-        // Первичный запуск
-        updateFlaskView();
-        createBubbles();
-
     </script>
 </body>
 </html>
